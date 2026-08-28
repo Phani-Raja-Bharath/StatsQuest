@@ -280,6 +280,30 @@ def add_attempt(pid, level, challenge, answer, correct, points):
     return True
 
 
+def reset_participant_attempts(pid):
+    connection = conn()
+    try:
+        connection.execute(sql("DELETE FROM challenge_attempts WHERE pid=?"), (pid,))
+        connection.commit()
+    finally:
+        connection.close()
+    participant_stats.clear()
+    leaderboard.clear()
+
+
+def delete_participant(pid):
+    connection = conn()
+    try:
+        connection.execute(sql("DELETE FROM challenge_attempts WHERE pid=?"), (pid,))
+        connection.execute(sql("DELETE FROM participants WHERE pid=?"), (pid,))
+        connection.commit()
+    finally:
+        connection.close()
+    participant_stats.clear()
+    all_participants.clear()
+    leaderboard.clear()
+
+
 @st.cache_data(show_spinner=False)
 def participant_stats(pid) -> pd.DataFrame:
     connection = conn()

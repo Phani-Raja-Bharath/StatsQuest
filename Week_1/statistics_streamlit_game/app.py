@@ -19,6 +19,7 @@ from db import (
     all_participants,
     configure_database,
     conn,
+    delete_participant,
     ensure_schema,
     find_participant_pid_by_name,
     leaderboard,
@@ -26,6 +27,7 @@ from db import (
     make_pid,
     participant_stats,
     register_participant,
+    reset_participant_attempts,
     sql,
     total_xp,
 )
@@ -38,6 +40,7 @@ from level_pages.level_4 import render as render_level_4
 from level_pages.level_5 import render as render_level_5
 from scoring import (
     BADGE_DESCRIPTIONS,
+    CHALLENGE_META,
     CHALLENGE_POINTS,
     CONSOLATION_FRACTION,
     LEVEL_CHALLENGES,
@@ -1396,6 +1399,58 @@ def score_answer(pid, level, challenge, answer, correct, base=20, correct_answer
             message = format_wrong_feedback(retry_message, answer, correct_answer, explanation)
             set_answer_feedback("error", message, challenge=challenge)
             show_challenge_status_box("two-wrong", "Second wrong attempt", message)
+
+
+def admin_completion_summary(participants_df, attempts_df):
+    """One row per participant showing score and stage completion by level."""
+    if participants_df.empty:
+        return pd.DataFrame()
+
+    total_required = sum(len(challenges) for challenges in LEVEL_REQUIRED_CHALLENGES.values())
+    rows = []
+    for _, participant in participants_df.iterrows():
+        pid = participant["PID"]
+        attempts = attempts_df.loc[attempts_df["PID"] == pid] if not attempts_df.empty else attempts_df
+        correct = set(attempts.loc[attempts["correct"] == 1, "challenge"].tolist()) if not attempts.empty else set()
+        xp = int(pd.Series(attempts["points"]).sum()) if not attempts.empty else 0
+
+        required_done = sum(
+            1
+            for challenges in LEVEL_REQUIRED_CHALLENGES.values()
+            for challenge in challenges
+            if challenge in correct
+        )
+        row = {
+            "Name": f"{participant['First name']} {participant['Last name']}",
+            "PIN": participant["PIN"],
+            "XP": xp,
+            "Required complete": f"{required_done}/{total_required}",
+            "Overall": "Complete" if required_done == total_required else "In progress",
+        }
+
+        for level, challenges in LEVEL_REQUIRED_CHALLENGES.items():
+            by_stage = {"watch": [], "explore": [], "try": [], "apply": [], "complete": []}
+            for challenge in challenges:
+                meta = CHALLENGE_META.get(challenge, {})
+                stage = meta.get("stage") or "complete"
+                if stage in by_stage:
+                    by_stage[stage].append(challenge)
+
+            stage_parts = []
+            for stage in ("watch", "explore", "try", "apply", "complete"):
+                stage_challenges = by_stage[stage]
+                if not stage_challenges:
+                    continue
+                done = sum(1 for challenge in stage_challenges if challenge in correct)
+                label = stage.title()
+                stage_parts.append(f"{label} {done}/{len(stage_challenges)}")
+            level_done = all(challenge in correct for challenge in challenges)
+            row[f"Level {level}"] = "Done" if level_done else "; ".join(stage_parts)
+
+        rows.append(row)
+
+    return pd.DataFrame(rows)
+
 
 # -----------------------------
 # Login
