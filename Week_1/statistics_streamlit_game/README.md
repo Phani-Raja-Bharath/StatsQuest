@@ -37,7 +37,8 @@ before answering), Level 3 offers hints only on request, Level 5 is independent 
 - Post-course quiz uses different scenarios than the training levels (transfer, not recall)
 - SQLite locally, Postgres (Neon) in production — same code path either way
 - Password-protected Admin Dashboard: full leaderboard, full attempt log, confidence-change
-  summary, all with CSV export
+  summary, participant completion status, reset/delete controls, all with CSV export
+- Light theme by default via `.streamlit/config.toml`
 
 ## Project structure
 
@@ -48,6 +49,7 @@ content_loader.py       Loads and looks up content.json
 db.py                   SQLite/Postgres connection handling and all queries
 navigation.py           Page order and page-name constants
 scoring.py              XP, badges, challenge tables
+.streamlit/config.toml  Streamlit config; defaults the app to light theme
 level_pages/level_N.py  One module per level's page content
 content.json            All student-facing copy: story text, level prompts, formulas,
                         video links, hints, and the self-regulation/goal-setting text —
@@ -89,8 +91,15 @@ On the login screen, expand **"🛠️ Instructor / Admin access"** and enter th
 reach the dashboard directly (no participant login needed). It shows:
 - The full leaderboard (every participant, rank, XP, correct count, attempts) with CSV export
 - The full attempt log (every answer, correct/incorrect, points, timestamp) with CSV export
+- A completion-status table showing each participant's XP and which stage of each level is
+  complete, with CSV export
 - A confidence summary: baseline confidence, check-out confidence, the change between them, and
   check-out quiz score, per participant
+- Participant management controls:
+  - **Reset scoring** keeps the participant's name/PIN but deletes attempts, XP, baseline,
+    check-out, and progress so they can start again with the same login.
+  - **Delete participant** removes the participant record and all attempt history. The student
+    must register again from scratch.
 
 **The admin password must be set as a secret — there is no built-in default.** Without it, the
 "Instructor / Admin access" panel shows a notice that admin access is disabled instead of
@@ -118,6 +127,12 @@ yourself, see "Keeping your own private notes" below.
 Scores persist in the database for as long as it exists, so you can reopen the Admin Dashboard
 at any time after the session — even after restarting the app — to review results.
 
+Reset and delete actions require typing `RESET` or `DELETE` before clicking the button. This is
+intentional: both actions remove scoring/progress data, and the confirmation prevents accidental
+clicks during class. If a participant is deleted while their browser is still open, the app checks
+the database on the next rerun/refresh, clears that browser's old Streamlit session state, and
+sends them back to registration.
+
 ## Deploying with Neon Postgres
 
 For Streamlit Cloud, use Neon Postgres instead of local SQLite so scores persist after app
@@ -129,6 +144,7 @@ restarts and redeploys.
 
 ```toml
 DATABASE_URL = "postgresql://USER:PASSWORD@HOST.neon.tech/DBNAME?sslmode=require"
+STATSQUEST_ADMIN_PASSWORD = "your-password-here"
 ```
 
 The app automatically uses Neon when `DATABASE_URL` or `NEON_DATABASE_URL` is available.
@@ -159,5 +175,6 @@ Suggested format:
   scores actually landed — a topic with a big confidence rise but a low quiz score is worth
   revisiting
 
-The database is created automatically. Clear participant rows before a new session if you want
-a clean leaderboard (see the Admin Dashboard or connect to the database directly).
+The database is created automatically. Use the Admin Dashboard's reset/delete controls for
+individual students. Connect to the database directly only if you need to clear the entire class
+before a new session.
