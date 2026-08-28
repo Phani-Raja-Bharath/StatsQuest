@@ -64,9 +64,24 @@ def render(ctx):
         "Choose a prediction, then click Submit prediction.",
     )
 
-    arrivals = st.slider("Average arrivals / 10 min", 2, 20, 8)
-    service = st.slider("Average service time (min)", 0.5, 4.0, 1.5, 0.1)
-    runs = st.selectbox("Monte Carlo runs", options=[10, 100, 1000, 10000], index=2)
+    arrivals = st.slider(
+        ctx.prominent_control_label("Average arrivals / 10 min"),
+        2,
+        20,
+        8,
+    )
+    service = st.slider(
+        ctx.prominent_control_label("Average service time (min)"),
+        0.5,
+        4.0,
+        1.5,
+        0.1,
+    )
+    runs = st.selectbox(
+        ctx.prominent_control_label("Monte Carlo runs"),
+        options=[10, 100, 1000, 10000],
+        index=2,
+    )
     st.caption("More runs make results steadier, but uncertainty is still there.")
 
     workloads = monte_carlo_workloads(arrivals, service, runs)

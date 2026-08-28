@@ -62,7 +62,12 @@ def render(ctx):
         "Choose a prediction, then click Submit prediction.",
     )
 
-    rate = st.slider("Average passengers arriving per 10 minutes", 1, 20, 5)
+    rate = st.slider(
+        ctx.prominent_control_label("Average passengers arriving per 10 minutes"),
+        1,
+        20,
+        5,
+    )
     mean_wait = 10 / rate
     st.metric("Estimated average wait time", f"{mean_wait:.2f} min")
     st.caption("Mean wait time = time interval / arrival rate. More arrivals means shorter waits.")

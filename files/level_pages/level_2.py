@@ -107,7 +107,14 @@ def render(ctx):
         "Choose a prediction, then click Submit prediction.",
     )
 
-    spread = st.slider(ctx.content_get("level_copy.level_2_sd_input", "Choose a standard deviation for a process"), 1, 30, 10)
+    spread = st.slider(
+        ctx.prominent_control_label(
+            ctx.content_get("level_copy.level_2_sd_input", "Choose a standard deviation for a process")
+        ),
+        1,
+        30,
+        10,
+    )
     st.caption(ctx.content_get("level_copy.level_2_sd_caption", "A larger standard deviation means values are farther from the mean."))
     st.bar_chart(spread_histogram(spread))
     st.caption(ctx.content_get("level_copy.level_2_chart_caption", "A larger standard deviation makes the chart wider."))

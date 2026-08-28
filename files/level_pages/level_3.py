@@ -10,7 +10,7 @@ def render(ctx):
     ctx.show_step_header(
         "Step 1 - Watch",
         "Before starting this level, watch the short videos. Together they cover Normal, Uniform, "
-        "Bernoulli, Binomial, and Poisson.",
+        "Bernoulli, Binomial, and Poisson distributions.",
     )
     ctx.show_youtube_resources("level_3")
     watched = ctx.show_video_acknowledgement(pid, 3, "L3_VIDEO_ACK", key="l3_video_ack")

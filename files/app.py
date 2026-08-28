@@ -536,7 +536,7 @@ ASSESSMENT_QUESTIONS = [
      ["Binomial", "Uniform", "Exponential", "Poisson"], "Binomial"),
     ("ARRIVAL", "A help desk tracks the **time between** one customer call ending and the next one starting. Which distribution models that **waiting time**?",
      ["Exponential", "Normal", "Binomial", "Uniform"], "Exponential"),
-    ("SIMULATION", "A project manager runs a **random simulation** of a construction project's completion time many times instead of once. Why?",
+    ("SIMULATION", "A city planner simulates **storm-water demand** thousands of times before choosing a drainage design. Why run the simulation many times?",
      ["To estimate possible outcomes and their chances", "To remove all randomness", "To guarantee the best result", "To avoid using data"],
      "To estimate possible outcomes and their chances"),
 ]
@@ -1207,11 +1207,15 @@ def show_record_status(recorded, done_title, pending_title, done_message, pendin
     else:
         show_challenge_status_box("unanswered", pending_title, pending_message)
 
+def prominent_control_label(label):
+    safe_label = str(label).replace("]", r"\]")
+    return f":blue-background[{safe_label}]"
+
 def show_video_acknowledgement(pid, level, video_challenge_id, key):
     """Renders the 'I watched the video' checkbox, records it (0 XP) the
     first time it's checked, and returns whether Step 1 - Watch is done."""
     watched = st.checkbox(
-        "I watched the video and am ready to continue.",
+        ":yellow-background[I watched the video and am ready to continue.]",
         value=is_stage_complete(pid, video_challenge_id),
         key=key,
     )
@@ -1897,6 +1901,7 @@ page_ctx = SimpleNamespace(
     show_step_header=show_step_header,
     show_scenario_card=show_scenario_card,
     show_record_status=show_record_status,
+    prominent_control_label=prominent_control_label,
     show_video_acknowledgement=show_video_acknowledgement,
     show_next_button=show_next_button,
 )
@@ -2117,7 +2122,7 @@ elif selected == "🥇 Leaderboard":
         )
     show_next_button()
     st.success("You have reached the end of StatsQuest.")
-    st.info("Before exiting, save a screenshot of this page and share it with your TA or professor.")
+    st.info("Score screenshot: before exiting, save a screenshot of your final score on this page and share it with your TA or professor.")
     if st.button("Exit application", type="primary", width="stretch"):
         log_out_student()
         st.rerun()

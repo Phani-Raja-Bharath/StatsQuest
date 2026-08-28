@@ -61,7 +61,7 @@ def render(ctx):
 
     ctx.show_challenge_acknowledgement(pid, "L1_OUTLIER")
     outlier = st.number_input(
-        "Replace 35 minutes with an unusually large commute time:",
+        ctx.prominent_control_label("Replace 35 minutes with an unusually large commute time:"),
         min_value=60,
         max_value=600,
         value=600,
