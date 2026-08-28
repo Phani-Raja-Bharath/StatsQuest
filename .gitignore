@@ -11,7 +11,7 @@ __pycache__/
 # Private local notes (real passwords / access steps) -- never commit these
 ADMIN_ACCESS.local.md
 **/ADMIN_ACCESS.local.md
-.claude/settings.local.json
+.claude/
 
 # Local score databases
 stats_game.db
@@ -24,6 +24,7 @@ stats_game.db
 .DS_Store
 Thumbs.db
 .vscode/
+.devcontainer/
 
 # Generated scratch/output files
 tmp/
