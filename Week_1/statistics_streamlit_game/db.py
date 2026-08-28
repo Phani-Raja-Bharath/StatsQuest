@@ -206,6 +206,16 @@ def find_participant_pid_by_name(first, last):
     return row[0] if row else None
 
 
+def participant_exists(pid):
+    connection = conn()
+    row = connection.execute(
+        sql("SELECT 1 FROM participants WHERE pid=?"),
+        (pid,),
+    ).fetchone()
+    connection.close()
+    return row is not None
+
+
 def register_participant(first, last, pin):
     pid = make_pid(first, last, pin)
     connection = conn()

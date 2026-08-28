@@ -25,6 +25,7 @@ from db import (
     leaderboard,
     level_score,
     make_pid,
+    participant_exists,
     participant_stats,
     register_participant,
     reset_participant_attempts,
@@ -1307,6 +1308,35 @@ def format_wrong_feedback(message, answer, correct_answer=None, explanation=None
 
 STAGE_LABELS = {"explore": "Explore", "try": "Try", "apply": "Apply"}
 
+
+def clear_student_runtime_state():
+    """Clear per-browser answers/progress controls; database rows remain authoritative."""
+    keep = {"logged", "is_admin", "pid", "first_name", "last_name", "admin_pw_input"}
+    prefixes = ("l1", "l2", "l4", "l5", "L3_", "pre_", "post_", "postself_")
+    exact_keys = {
+        "selected_page",
+        "last_selected_page",
+        "learning_goal",
+        "learning_goal_choice",
+        "answer_feedback",
+    }
+    for key in list(st.session_state.keys()):
+        if key in keep:
+            continue
+        if key in exact_keys or key.startswith(prefixes):
+            del st.session_state[key]
+
+
+def log_out_student(message=None):
+    clear_student_runtime_state()
+    st.session_state.logged = False
+    st.session_state.is_admin = False
+    st.session_state.pid = ""
+    st.session_state.first_name = ""
+    st.session_state.last_name = ""
+    if message:
+        st.session_state.logout_message = message
+
 def score_answer(pid, level, challenge, answer, correct, base=20, correct_answer=None, explanation=None, stage=None):
     """`stage` (None, "explore", "try", or "apply") controls whether a wrong
     *non-final* attempt reveals the correct answer. Per the faded-scaffolding
@@ -1464,6 +1494,7 @@ for key, default in {
     "learning_goal": "",
     "answer_feedback": None,
     "last_selected_page": "",
+    "logout_message": None,
 }.items():
     if key not in st.session_state:
         st.session_state[key] = default
@@ -1473,6 +1504,15 @@ try:
 except Exception as schema_error:
     show_database_error(str(schema_error))
 
+if (
+    st.session_state.logged
+    and not st.session_state.is_admin
+    and st.session_state.pid
+    and not participant_exists(st.session_state.pid)
+):
+    log_out_student("Your participant record was removed by the instructor. Register again to start fresh.")
+    st.rerun()
+
 if not st.session_state.logged:
     st.markdown('<div class="game-title">🎮 StatsQuest</div>', unsafe_allow_html=True)
     st.markdown(
@@ -1481,6 +1521,10 @@ if not st.session_state.logged:
     )
 
     st.markdown(STORY["intro"])
+
+    if st.session_state.logout_message:
+        st.info(st.session_state.logout_message)
+        st.session_state.logout_message = None
 
     st.info(
         "Enter your name and a 4-digit PIN. Use the same name and PIN later to resume."
@@ -1510,6 +1554,7 @@ if not st.session_state.logged:
                     )
                 else:
                     new_pid, fn, ln = register_participant(first, last, pin.strip())
+                    clear_student_runtime_state()
                     st.session_state.pid = new_pid
                     st.session_state.first_name = fn
                     st.session_state.last_name = ln
@@ -1760,7 +1805,7 @@ with st.sidebar:
 
     st.divider()
     if st.button("Log out"):
-        st.session_state.logged = False
+        log_out_student()
         st.rerun()
 
 # -----------------------------
@@ -2074,8 +2119,5 @@ elif selected == "🥇 Leaderboard":
     st.success("You have reached the end of StatsQuest.")
     st.info("Before exiting, save a screenshot of this page and share it with your TA or professor.")
     if st.button("Exit application", type="primary", width="stretch"):
-        st.session_state.logged = False
-        st.session_state.is_admin = False
-        st.session_state.selected_page = PAGE_OPTIONS[0]
-        st.session_state.answer_feedback = None
+        log_out_student()
         st.rerun()
