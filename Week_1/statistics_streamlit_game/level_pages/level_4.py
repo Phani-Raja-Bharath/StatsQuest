@@ -3,6 +3,14 @@ import pandas as pd
 import streamlit as st
 
 
+@st.cache_data(show_spinner=False)
+def arrival_count_histogram(rate):
+    rng = np.random.default_rng(11)
+    counts = rng.poisson(rate, 1000)
+    values, freq = np.unique(counts, return_counts=True)
+    return pd.DataFrame({"Frequency": freq}, index=values)
+
+
 def render(ctx):
     pid = ctx.pid
     completed = ctx.correct_challenges(pid)
@@ -58,10 +66,7 @@ def render(ctx):
     mean_wait = 10 / rate
     st.metric("Estimated average wait time", f"{mean_wait:.2f} min")
     st.caption("Mean wait time = time interval / arrival rate. More arrivals means shorter waits.")
-    np.random.seed(11)
-    counts = np.random.poisson(rate, 1000)
-    values, freq = np.unique(counts, return_counts=True)
-    st.bar_chart(pd.DataFrame({"Frequency": freq}, index=values))
+    st.bar_chart(arrival_count_histogram(rate))
     st.caption("This chart shows passenger counts in 10-minute blocks.")
 
     observed = st.radio(

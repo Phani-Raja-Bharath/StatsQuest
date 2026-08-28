@@ -222,9 +222,12 @@ def register_participant(first, last, pin):
     )
     connection.commit()
     connection.close()
+    all_participants.clear()
+    leaderboard.clear()
     return pid, first.strip(), last.strip()
 
 
+@st.cache_data(show_spinner=False)
 def all_participants() -> pd.DataFrame:
     """Every registered participant with their PIN, for the admin dashboard's
     PIN lookup -- includes participants with zero recorded attempts yet,
@@ -272,9 +275,12 @@ def add_attempt(pid, level, challenge, answer, correct, points):
         raise
     finally:
         connection.close()
+    participant_stats.clear()
+    leaderboard.clear()
     return True
 
 
+@st.cache_data(show_spinner=False)
 def participant_stats(pid) -> pd.DataFrame:
     connection = conn()
     df = connection.read_sql(
@@ -285,6 +291,7 @@ def participant_stats(pid) -> pd.DataFrame:
     return df
 
 
+@st.cache_data(show_spinner=False)
 def leaderboard() -> pd.DataFrame:
     connection = conn()
     df = connection.read_sql("""

@@ -3,6 +3,14 @@ import pandas as pd
 import streamlit as st
 
 
+@st.cache_data(show_spinner=False)
+def spread_histogram(spread):
+    rng = np.random.default_rng(7)
+    sample = rng.normal(50, spread, 1200)
+    hist = np.histogram(sample, bins=20)
+    return pd.DataFrame({"Frequency": hist[0]}, index=np.round(hist[1][:-1], 1))
+
+
 def render(ctx):
     pid = ctx.pid
     completed = ctx.correct_challenges(pid)
@@ -101,11 +109,7 @@ def render(ctx):
 
     spread = st.slider(ctx.content_get("level_copy.level_2_sd_input", "Choose a standard deviation for a process"), 1, 30, 10)
     st.caption(ctx.content_get("level_copy.level_2_sd_caption", "A larger standard deviation means values are farther from the mean."))
-    np.random.seed(7)
-    sample = np.random.normal(50, spread, 1200)
-    hist = np.histogram(sample, bins=20)
-    chart = pd.DataFrame({"Frequency": hist[0]}, index=np.round(hist[1][:-1], 1))
-    st.bar_chart(chart)
+    st.bar_chart(spread_histogram(spread))
     st.caption(ctx.content_get("level_copy.level_2_chart_caption", "A larger standard deviation makes the chart wider."))
 
     ctx.show_challenge_acknowledgement(pid, "L2_SD")

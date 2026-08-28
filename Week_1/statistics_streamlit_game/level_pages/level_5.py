@@ -5,6 +5,16 @@ import pandas as pd
 import streamlit as st
 
 
+@st.cache_data(show_spinner=False)
+def monte_carlo_workloads(arrivals, service, runs):
+    rng = np.random.default_rng(42)
+    counts = rng.poisson(arrivals, runs)
+    workloads = np.zeros(runs)
+    nonzero = counts > 0
+    workloads[nonzero] = rng.gamma(shape=counts[nonzero], scale=service)
+    return workloads
+
+
 def render(ctx):
     pid = ctx.pid
     completed = ctx.correct_challenges(pid)
@@ -59,15 +69,7 @@ def render(ctx):
     runs = st.selectbox("Monte Carlo runs", options=[10, 100, 1000, 10000], index=2)
     st.caption("More runs make results steadier, but uncertainty is still there.")
 
-    rng = np.random.default_rng(42)
-    workloads = []
-    for _ in range(runs):
-        count = rng.poisson(arrivals)
-        if count == 0:
-            workloads.append(0.0)
-        else:
-            workloads.append(rng.exponential(service, count).sum())
-    workloads = np.array(workloads)
+    workloads = monte_carlo_workloads(arrivals, service, runs)
 
     col_a, col_b, col_c = st.columns(3)
     col_a.metric("Estimated mean", f"{workloads.mean():.2f}")
