@@ -1323,7 +1323,7 @@ def clear_student_runtime_state():
     for key in list(st.session_state.keys()):
         if key in keep:
             continue
-        if key in exact_keys or key.startswith(prefixes):
+        if key in exact_keys or (isinstance(key, str) and key.startswith(prefixes)):
             del st.session_state[key]
 
 
