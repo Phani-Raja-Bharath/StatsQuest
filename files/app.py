@@ -65,6 +65,21 @@ CONTENT_ISSUES = missing_required_keys(CONTENT)
 def content_get(path: str, default: Any = "") -> Any:
     return get_content(CONTENT, path, default)
 
+def pin_validation_message(pin: str) -> str | None:
+    """Return a student-facing warning for weak registration PINs."""
+    digits = pin.strip()
+    if not digits.isdigit() or len(digits) != 4:
+        return "Your PIN must be exactly 4 digits."
+    if len(set(digits)) == 1:
+        return "Choose a stronger PIN. Repeated digits like 0000 or 1111 are not allowed."
+
+    values = [int(digit) for digit in digits]
+    steps = [right - left for left, right in zip(values, values[1:])]
+    if all(step == 1 for step in steps) or all(step == -1 for step in steps):
+        return "Choose a stronger PIN. Sequences like 1234 or 4321 are not allowed."
+
+    return None
+
 _CSV_FORMULA_TRIGGERS = ("=", "+", "-", "@", "\t", "\r")
 
 def csv_safe_export(df, columns):
@@ -1537,13 +1552,14 @@ if not st.session_state.logged:
     c1, c2 = st.columns(2)
     first = c1.text_input("First name", placeholder="Joe")
     last = c2.text_input("Last name", placeholder="Smith")
-    pin = st.text_input("Choose a 4-digit PIN", placeholder="1234", max_chars=4, type="password")
+    pin = st.text_input("Choose a 4-digit PIN", placeholder="4827", max_chars=4, type="password")
 
     if st.button(f"🚀 {content_get('home.start_button', 'Start StatsQuest')}", type="primary", width="stretch"):
+        pin_warning = pin_validation_message(pin)
         if not first.strip() or not last.strip():
             st.warning("Enter your first and last name.")
-        elif not pin.strip().isdigit() or len(pin.strip()) != 4:
-            st.warning("Your PIN must be exactly 4 digits.")
+        elif pin_warning:
+            st.warning(pin_warning)
         else:
             registered = False
             try:
