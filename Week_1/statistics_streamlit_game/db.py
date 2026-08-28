@@ -234,7 +234,7 @@ def all_participants() -> pd.DataFrame:
     unlike a query joined through challenge_attempts."""
     connection = conn()
     df = connection.read_sql(
-        sql('SELECT first_name AS "First name", last_name AS "Last name", '
+        sql('SELECT pid AS "PID", first_name AS "First name", last_name AS "Last name", '
             'pin AS "PIN", created_at AS "Registered" FROM participants '
             "ORDER BY created_at")
     )

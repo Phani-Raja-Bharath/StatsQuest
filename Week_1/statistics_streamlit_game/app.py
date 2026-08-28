@@ -1605,18 +1605,52 @@ if st.session_state.is_admin:
                 | participants_df["Last name"].str.lower().str.contains(needle, regex=False)
             )
             filtered_participants = participants_df.loc[name_mask]
-        st.dataframe(filtered_participants, hide_index=True, width="stretch")
+        st.dataframe(filtered_participants.drop(columns=["PID"]), hide_index=True, width="stretch")
         st.download_button(
             "⬇️ Download participants (CSV)",
-            csv_safe_export(filtered_participants, ["First name", "Last name"]).to_csv(index=False).encode("utf-8"),
+            csv_safe_export(filtered_participants.drop(columns=["PID"]), ["First name", "Last name"]).to_csv(index=False).encode("utf-8"),
             "statsquest_participants.csv",
             "text/csv",
         )
 
+        st.subheader("🧹 Manage participant records")
+        st.caption("Reset scores keeps the name/PIN login. Delete participant removes the student and all attempt history.")
+        participant_options = {
+            f"{row['First name']} {row['Last name']} — PIN {row['PIN']}": row["PID"]
+            for _, row in participants_df.iterrows()
+        }
+        selected_participant_label = st.selectbox(
+            "Participant",
+            list(participant_options),
+            key="admin_manage_participant",
+        )
+        selected_pid = participant_options[selected_participant_label]
+        confirm_text = st.text_input(
+            "Type RESET or DELETE to confirm",
+            key="admin_manage_confirm",
+            placeholder="RESET or DELETE",
+        )
+        reset_col, delete_col = st.columns(2)
+        if reset_col.button("Reset this participant's scoring", width="stretch"):
+            if confirm_text.strip().upper() != "RESET":
+                st.warning("Type RESET before resetting this participant's scoring.")
+            else:
+                reset_participant_attempts(selected_pid)
+                st.success(f"Scoring reset for {selected_participant_label}.")
+                st.rerun()
+        if delete_col.button("Delete this participant", type="primary", width="stretch"):
+            if confirm_text.strip().upper() != "DELETE":
+                st.warning("Type DELETE before deleting this participant.")
+            else:
+                delete_participant(selected_pid)
+                st.success(f"Deleted {selected_participant_label}.")
+                st.rerun()
+
     st.subheader("📜 Full attempt log")
     c = conn()
     log = c.read_sql("""
-        SELECT p.first_name || ' ' || p.last_name AS "Name",
+        SELECT p.pid AS "PID",
+               p.first_name || ' ' || p.last_name AS "Name",
                a.level, a.challenge, a.answer, a.correct, a.points, a.created_at
         FROM challenge_attempts a
         JOIN participants p ON p.pid = a.pid
@@ -1626,11 +1660,24 @@ if st.session_state.is_admin:
     if log.empty:
         st.info("No attempts recorded yet.")
     else:
-        st.dataframe(log, hide_index=True, width="stretch")
+        st.dataframe(log.drop(columns=["PID"]), hide_index=True, width="stretch")
         st.download_button(
             "⬇️ Download attempt log (CSV)",
-            csv_safe_export(log, ["Name", "answer"]).to_csv(index=False).encode("utf-8"),
+            csv_safe_export(log.drop(columns=["PID"]), ["Name", "answer"]).to_csv(index=False).encode("utf-8"),
             "statsquest_attempts.csv",
+            "text/csv",
+        )
+
+    st.subheader("✅ Completion status")
+    completion = admin_completion_summary(participants_df, log)
+    if completion.empty:
+        st.info("No participants yet.")
+    else:
+        st.dataframe(completion, hide_index=True, width="stretch")
+        st.download_button(
+            "⬇️ Download completion status (CSV)",
+            csv_safe_export(completion, ["Name"]).to_csv(index=False).encode("utf-8"),
+            "statsquest_completion_status.csv",
             "text/csv",
         )
 
