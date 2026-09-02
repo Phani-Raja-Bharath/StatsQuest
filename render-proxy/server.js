@@ -112,6 +112,21 @@ proxy.on("error", (error, request, response) => {
 });
 
 const server = http.createServer((request, response) => {
+  if (request.url === "/__proxy_health") {
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(
+      JSON.stringify({
+        ok: true,
+        service: "statsquest-streamlit-proxy",
+        target,
+        host: request.headers.host,
+        forwardedHost: request.headers["x-forwarded-host"],
+        forwardedProto: request.headers["x-forwarded-proto"],
+      }),
+    );
+    return;
+  }
+
   proxy.web(request, response);
 });
 
