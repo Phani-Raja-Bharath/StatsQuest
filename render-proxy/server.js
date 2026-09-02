@@ -5,6 +5,7 @@ const port = Number(process.env.PORT || 10000);
 const target = "https://statsquestformands.streamlit.app";
 const publicHost = process.env.PUBLIC_HOST || "urban-digital-twin-lab.com";
 const targetUrl = new URL(target);
+const proxyVersion = "2026-09-02-url-rewrite-v2";
 
 const proxy = httpProxy.createProxyServer({
   target,
@@ -17,6 +18,7 @@ const proxy = httpProxy.createProxyServer({
 
 function rewriteOrigin(proxyRequest) {
   proxyRequest.setHeader("origin", target);
+  proxyRequest.setHeader("referer", `${target}/`);
   proxyRequest.setHeader("accept-encoding", "identity");
 }
 
@@ -56,6 +58,24 @@ function rewriteLocation(location, request) {
   return location;
 }
 
+function rewriteHeaderValue(value, request) {
+  if (Array.isArray(value)) {
+    return value.map((item) => rewriteHeaderValue(item, request));
+  }
+
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const publicOrigin = getPublicOrigin(request);
+  const publicHostName = new URL(publicOrigin).host;
+
+  return value
+    .replaceAll(target, publicOrigin)
+    .replaceAll(targetUrl.host, publicHostName)
+    .replaceAll(`Domain=${targetUrl.host}`, `Domain=${publicHostName}`);
+}
+
 proxy.on("proxyReq", rewriteOrigin);
 proxy.on("proxyReqWs", rewriteOrigin);
 
@@ -64,6 +84,12 @@ proxy.on("proxyRes", (proxyResponse, request, response) => {
   if (location) {
     proxyResponse.headers.location = rewriteLocation(location, request);
   }
+
+  Object.entries(proxyResponse.headers).forEach(([name, value]) => {
+    proxyResponse.headers[name] = rewriteHeaderValue(value, request);
+  });
+
+  proxyResponse.headers["x-statsquest-proxy"] = proxyVersion;
 
   const chunks = [];
 
@@ -98,6 +124,8 @@ proxy.on("proxyRes", (proxyResponse, request, response) => {
     }
 
     delete proxyResponse.headers["content-encoding"];
+    delete proxyResponse.headers["content-security-policy"];
+    delete proxyResponse.headers["content-security-policy-report-only"];
     response.writeHead(proxyResponse.statusCode || 200, proxyResponse.headers);
     response.end(responseBody);
   });
@@ -118,6 +146,7 @@ const server = http.createServer((request, response) => {
       JSON.stringify({
         ok: true,
         service: "statsquest-streamlit-proxy",
+        version: proxyVersion,
         target,
         host: request.headers.host,
         forwardedHost: request.headers["x-forwarded-host"],
