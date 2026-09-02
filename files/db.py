@@ -15,7 +15,8 @@ USE_POSTGRES = False
 _sqlite_write_lock = threading.Lock()
 _POSTGRES_POOL_MINCONN = 1
 _POSTGRES_POOL_MAXCONN = 50
-_POSTGRES_POOL_WAIT_SECONDS = 10
+_POSTGRES_POOL_WAIT_SECONDS = 30
+_POSTGRES_CONNECT_TIMEOUT_SECONDS = 10
 
 
 def configure_database(db_path: str, database_url: str | None = None) -> None:
@@ -202,6 +203,7 @@ def _postgres_pool():
         minconn,
         maxconn,
         DATABASE_URL,
+        connect_timeout=_POSTGRES_CONNECT_TIMEOUT_SECONDS,
         keepalives=1,
         keepalives_idle=30,
         keepalives_interval=10,

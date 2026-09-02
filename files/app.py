@@ -1712,16 +1712,15 @@ if st.session_state.is_admin:
                 st.rerun()
 
     st.subheader("📜 Full attempt log")
-    c = conn()
-    log = c.read_sql("""
-        SELECT p.pid AS "PID",
-               p.first_name || ' ' || p.last_name AS "Name",
-               a.level, a.challenge, a.answer, a.correct, a.points, a.created_at
-        FROM challenge_attempts a
-        JOIN participants p ON p.pid = a.pid
-        ORDER BY a.created_at
-    """)
-    c.close()
+    with conn() as connection:
+        log = connection.read_sql("""
+            SELECT p.pid AS "PID",
+                   p.first_name || ' ' || p.last_name AS "Name",
+                   a.level, a.challenge, a.answer, a.correct, a.points, a.created_at
+            FROM challenge_attempts a
+            JOIN participants p ON p.pid = a.pid
+            ORDER BY a.created_at
+        """)
     if log.empty:
         st.info("No attempts recorded yet.")
     else:
