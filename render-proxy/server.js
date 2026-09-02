@@ -12,10 +12,12 @@ const proxy = httpProxy.createProxyServer({
   secure: true,
   xfwd: true,
   ws: true,
+  selfHandleResponse: true,
 });
 
 function rewriteOrigin(proxyRequest) {
   proxyRequest.setHeader("origin", target);
+  proxyRequest.setHeader("accept-encoding", "identity");
 }
 
 function getPublicOrigin(request) {
@@ -57,11 +59,48 @@ function rewriteLocation(location, request) {
 proxy.on("proxyReq", rewriteOrigin);
 proxy.on("proxyReqWs", rewriteOrigin);
 
-proxy.on("proxyRes", (proxyResponse, request) => {
+proxy.on("proxyRes", (proxyResponse, request, response) => {
   const location = proxyResponse.headers.location;
   if (location) {
     proxyResponse.headers.location = rewriteLocation(location, request);
   }
+
+  const chunks = [];
+
+  proxyResponse.on("data", (chunk) => {
+    chunks.push(chunk);
+  });
+
+  proxyResponse.on("end", () => {
+    if (!response || response.destroyed) {
+      return;
+    }
+
+    const body = Buffer.concat(chunks);
+    const contentType = proxyResponse.headers["content-type"] || "";
+    const isTextResponse =
+      contentType.includes("text/") ||
+      contentType.includes("javascript") ||
+      contentType.includes("json");
+
+    let responseBody = body;
+    const publicOrigin = getPublicOrigin(request);
+
+    if (isTextResponse && body.length > 0) {
+      responseBody = Buffer.from(
+        body
+          .toString("utf8")
+          .replaceAll(target, publicOrigin)
+          .replaceAll(targetUrl.host, new URL(publicOrigin).host),
+        "utf8",
+      );
+      proxyResponse.headers["content-length"] = Buffer.byteLength(responseBody);
+    }
+
+    delete proxyResponse.headers["content-encoding"];
+    response.writeHead(proxyResponse.statusCode || 200, proxyResponse.headers);
+    response.end(responseBody);
+  });
 });
 
 proxy.on("error", (error, request, response) => {
